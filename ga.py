@@ -16,7 +16,7 @@ if uploaded_file is not None:
     st.dataframe(df)
     
     # Modify Ratings
-    st.subheader("Rating Modification")
+    st.subheader("Modified Dataset")
     st.write("Adding 0.5 to movie_a")
     
     df_modified = df.copy()
