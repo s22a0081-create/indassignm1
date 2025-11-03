@@ -2,15 +2,11 @@ import streamlit as st
 import pandas as pd
 import random
 
-# =============================================
 # Streamlit App Title
-# =============================================
 st.title("📺 TV Program Scheduling using Genetic Algorithm")
-st.write("Gunakan Genetic Algorithm untuk mencari jadual program TV paling optimum berdasarkan rating.")
+st.write("Use Genetic Algorithm to find the most optimum TV program based on rating.")
 
-# =============================================
-# Upload CSV
-# =============================================
+# Upload CSV 
 uploaded_file = st.file_uploader("📂 Upload fail 'program_ratings.csv'", type=["csv"])
 
 if uploaded_file is not None:
@@ -19,15 +15,13 @@ if uploaded_file is not None:
     st.subheader("📊 Kandungan Dataset Asal")
     st.dataframe(df)
     
-    # =============================================
-    # Modify Ratings (example modification)
-    # =============================================
-    st.subheader("✏️ Pengubahsuaian Rating")
-    st.write("Contoh: Menambah 0.5 pada semua rating untuk meningkatkan skor program.")
+    # Modify Ratings
+    st.subheader("Rating Modification")
+    st.write("Adding 0.5 to movie_a")
     
     df_modified = df.copy()
-    df_modified.iloc[:, 1:] = df_modified.iloc[:, 1:] + 0.5  # Modify ratings
-    
+    df_modified.loc[df_modified.iloc[:, 0] == 'movie_a', df_modified.columns[1:]] += 0.5 #Add 0.5 to movie_a rating only to boost its rating
+
     st.dataframe(df_modified)
     
     # Convert dataframe ke dictionary
