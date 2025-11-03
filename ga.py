@@ -3,11 +3,11 @@ import pandas as pd
 import random
 
 # Streamlit App Title
-st.title("📺 TV Program Scheduling using Genetic Algorithm")
-st.write("Use Genetic Algorithm to find the most optimum TV program based on rating.")
+st.title("TV Program Scheduling using Genetic Algorithm")
+st.write("Use Genetic Algorithm to find the most optimum TV program based on ratings.")
 
 # Upload CSV 
-uploaded_file = st.file_uploader("📂 Upload fail 'program_ratings.csv'", type=["csv"])
+uploaded_file = st.file_uploader("", type=["csv"])
 
 if uploaded_file is not None:
     df = pd.read_csv(uploaded_file)
