@@ -34,28 +34,23 @@ if uploaded_file is not None:
     all_programs = list(program_ratings.keys())
     all_time_slots = list(range(6, 6 + len(list(program_ratings.values())[0])))
 
-    # =============================================
     # Input Parameters (GA)
-    # =============================================
-    st.sidebar.header("⚙️ Tetapan Genetic Algorithm")
-    generations = st.sidebar.number_input("Jumlah Generasi", min_value=50, max_value=500, value=200, step=50)
-    population_size = st.sidebar.number_input("Saiz Populasi", min_value=20, max_value=200, value=60, step=10)
-    elitism_size = st.sidebar.number_input("Saiz Elitisme", min_value=1, max_value=10, value=2, step=1)
-
-    st.sidebar.write("### Tetapan Eksperimen (3 Percubaan)")
+    generations = 200
+    population_size = 60
+    elitism_size = 2
+    
+    st.sidebar.write("### Experiment Setup (3 trials)")
     CO_R_values = []
     MUT_R_values = []
 
     for i in range(1, 4):
-        st.sidebar.write(f"**Percubaan {i}**")
-        co_r = st.sidebar.slider(f"Crossover Rate Percubaan {i}", 0.0, 0.95, 0.8, 0.05)
-        mut_r = st.sidebar.slider(f"Mutation Rate Percubaan {i}", 0.01, 0.05, 0.02, 0.01)
+        st.sidebar.write(f"**Trial {i}**")
+        co_r = st.sidebar.slider(f"Crossover Rate {i}", 0.0, 0.95, 0.8, 0.05)
+        mut_r = st.sidebar.slider(f"Mutation Rate {i}", 0.01, 0.05, 0.02, 0.01)
         CO_R_values.append(co_r)
         MUT_R_values.append(mut_r)
 
-    # =============================================
     # Fungsi GA
-    # =============================================
     def fitness_function(schedule):
         total_rating = 0
         for time_slot, program in enumerate(schedule):
@@ -104,12 +99,10 @@ if uploaded_file is not None:
 
         return max(population, key=lambda s: fitness_function(s))
 
-    # =============================================
-    # Jalankan 3 Percubaan
-    # =============================================
-    if st.button("🚀 Jalankan 3 Percubaan"):
+    # Conducted the 3 trials
+    if st.button("Begin 3 trials "):
         for i in range(3):
-            st.subheader(f"🧠 Percubaan {i+1}")
+            st.subheader(f"Trial {i+1}")
             st.write(f"**Crossover Rate:** {CO_R_values[i]} | **Mutation Rate:** {MUT_R_values[i]}")
 
             initial_schedule = all_programs.copy()
@@ -137,4 +130,4 @@ if uploaded_file is not None:
             st.success(f"⭐ Total Ratings: {fitness_function(best_schedule):.2f}")
 
 else:
-    st.info("Sila upload fail CSV terlebih dahulu untuk memulakan analisis.")
+    st.info("Please upload your CSV file here!")
