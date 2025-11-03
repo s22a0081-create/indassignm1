@@ -2,44 +2,54 @@ import streamlit as st
 import pandas as pd
 import random
 
-# ==============================
-# STREAMLIT UI
-# ==============================
+# =============================================
+# Streamlit App Title
+# =============================================
 st.title("📺 TV Program Scheduling using Genetic Algorithm")
-st.write("Upload fail CSV yang mengandungi rating program untuk setiap slot masa.")
+st.write("Gunakan Genetic Algorithm untuk mencari jadual program TV paling optimum berdasarkan rating.")
 
-uploaded_file = st.file_uploader("Upload program_ratings.csv", type=["csv"])
+# =============================================
+# Upload CSV
+# =============================================
+uploaded_file = st.file_uploader("📂 Upload fail 'program_ratings.csv'", type=["csv"])
 
 if uploaded_file is not None:
-    # ==============================
-    # BACA CSV DAN PROSES DATA
-    # ==============================
     df = pd.read_csv(uploaded_file)
     st.subheader("📊 Kandungan Dataset")
     st.dataframe(df)
 
-    # Tukar DataFrame kepada dictionary
+    # Convert dataframe ke dictionary
     program_ratings = {}
     for i, row in df.iterrows():
         program = row[0]
         ratings = list(row[1:].astype(float))
         program_ratings[program] = ratings
 
-    # ==============================
-    # PARAMETER GA
-    # ==============================
-    GEN = 200
-    POP = 60
-    CO_R = 0.8
-    MUT_R = 0.2
-    EL_S = 2
-
     all_programs = list(program_ratings.keys())
     all_time_slots = list(range(6, 6 + len(list(program_ratings.values())[0])))
 
-    # ==============================
-    # DEFINISI FUNGSI
-    # ==============================
+    # =============================================
+    # Input Parameters (Task 3)
+    # =============================================
+    st.sidebar.header("⚙️ Tetapan Genetic Algorithm")
+    generations = st.sidebar.number_input("Jumlah Generasi", min_value=50, max_value=500, value=200, step=50)
+    population_size = st.sidebar.number_input("Saiz Populasi", min_value=20, max_value=200, value=60, step=10)
+    elitism_size = st.sidebar.number_input("Saiz Elitisme", min_value=1, max_value=10, value=2, step=1)
+
+    st.sidebar.write("### Tetapan Eksperimen (3 Percubaan)")
+    CO_R_values = []
+    MUT_R_values = []
+
+    for i in range(1, 4):
+        st.sidebar.write(f"**Percubaan {i}**")
+        co_r = st.sidebar.slider(f"Crossover Rate Percubaan {i}", 0.0, 0.95, 0.8, 0.05)
+        mut_r = st.sidebar.slider(f"Mutation Rate Percubaan {i}", 0.01, 0.05, 0.02, 0.01)
+        CO_R_values.append(co_r)
+        MUT_R_values.append(mut_r)
+
+    # =============================================
+    # Definisi Fungsi GA
+    # =============================================
     def fitness_function(schedule):
         total_rating = 0
         for time_slot, program in enumerate(schedule):
@@ -58,7 +68,7 @@ if uploaded_file is not None:
         schedule[mutation_point] = new_program
         return schedule
 
-    def genetic_algorithm(initial_schedule, generations=GEN, population_size=POP, crossover_rate=CO_R, mutation_rate=MUT_R, elitism_size=EL_S):
+    def genetic_algorithm(initial_schedule, generations, population_size, crossover_rate, mutation_rate, elitism_size):
         population = [initial_schedule]
         for _ in range(population_size - 1):
             random_schedule = initial_schedule.copy()
@@ -88,27 +98,37 @@ if uploaded_file is not None:
 
         return max(population, key=lambda s: fitness_function(s))
 
-    # ==============================
-    # JALANKAN GA
-    # ==============================
-    if st.button("🚀 Run Genetic Algorithm"):
-        initial_schedule = all_programs.copy()
-        random.shuffle(initial_schedule)
-        best_schedule = genetic_algorithm(initial_schedule)
+    # =============================================
+    # Jalankan 3 Percubaan (Task 5)
+    # =============================================
+    if st.button("🚀 Jalankan 3 Percubaan"):
+        for i in range(3):
+            st.subheader(f"🧠 Percubaan {i+1}")
+            st.write(f"**Crossover Rate:** {CO_R_values[i]} | **Mutation Rate:** {MUT_R_values[i]}")
 
-        # Papar hasil
-        st.subheader("🧠 Final Optimal Schedule")
-        results = []
-        for time_slot, program in enumerate(best_schedule):
-            results.append({
-                "Time Slot": f"{all_time_slots[time_slot]:02d}:00",
-                "Program": program,
-                "Rating": program_ratings[program][time_slot]
-            })
+            initial_schedule = all_programs.copy()
+            random.shuffle(initial_schedule)
 
-        results_df = pd.DataFrame(results)
-        st.dataframe(results_df)
+            best_schedule = genetic_algorithm(
+                initial_schedule,
+                generations=generations,
+                population_size=population_size,
+                crossover_rate=CO_R_values[i],
+                mutation_rate=MUT_R_values[i],
+                elitism_size=elitism_size
+            )
 
-        st.success(f"⭐ Total Ratings: {fitness_function(best_schedule):.2f}")
+            results = []
+            for time_slot, program in enumerate(best_schedule):
+                results.append({
+                    "Time Slot": f"{all_time_slots[time_slot]:02d}:00",
+                    "Program": program,
+                    "Rating": program_ratings[program][time_slot]
+                })
+
+            results_df = pd.DataFrame(results)
+            st.dataframe(results_df)
+            st.success(f"⭐ Total Ratings: {fitness_function(best_schedule):.2f}")
+
 else:
     st.info("Sila upload fail CSV terlebih dahulu untuk memulakan analisis.")
