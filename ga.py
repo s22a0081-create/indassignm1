@@ -15,12 +15,24 @@ uploaded_file = st.file_uploader("📂 Upload fail 'program_ratings.csv'", type=
 
 if uploaded_file is not None:
     df = pd.read_csv(uploaded_file)
-    st.subheader("📊 Kandungan Dataset")
+    
+    st.subheader("📊 Kandungan Dataset Asal")
     st.dataframe(df)
-
+    
+    # =============================================
+    # Modify Ratings (example modification)
+    # =============================================
+    st.subheader("✏️ Pengubahsuaian Rating")
+    st.write("Contoh: Menambah 0.5 pada semua rating untuk meningkatkan skor program.")
+    
+    df_modified = df.copy()
+    df_modified.iloc[:, 1:] = df_modified.iloc[:, 1:] + 0.5  # Modify ratings
+    
+    st.dataframe(df_modified)
+    
     # Convert dataframe ke dictionary
     program_ratings = {}
-    for i, row in df.iterrows():
+    for i, row in df_modified.iterrows():
         program = row[0]
         ratings = list(row[1:].astype(float))
         program_ratings[program] = ratings
@@ -29,7 +41,7 @@ if uploaded_file is not None:
     all_time_slots = list(range(6, 6 + len(list(program_ratings.values())[0])))
 
     # =============================================
-    # Input Parameters (Task 3)
+    # Input Parameters (GA)
     # =============================================
     st.sidebar.header("⚙️ Tetapan Genetic Algorithm")
     generations = st.sidebar.number_input("Jumlah Generasi", min_value=50, max_value=500, value=200, step=50)
@@ -48,7 +60,7 @@ if uploaded_file is not None:
         MUT_R_values.append(mut_r)
 
     # =============================================
-    # Definisi Fungsi GA
+    # Fungsi GA
     # =============================================
     def fitness_function(schedule):
         total_rating = 0
@@ -99,7 +111,7 @@ if uploaded_file is not None:
         return max(population, key=lambda s: fitness_function(s))
 
     # =============================================
-    # Jalankan 3 Percubaan (Task 5)
+    # Jalankan 3 Percubaan
     # =============================================
     if st.button("🚀 Jalankan 3 Percubaan"):
         for i in range(3):
