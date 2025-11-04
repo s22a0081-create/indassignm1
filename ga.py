@@ -1,143 +1,185 @@
+##################################### IMPORT LIBRARIES ################################################################
 import streamlit as st
 import pandas as pd
 import random
+import csv
+import requests
 
-# =============================================
-# Streamlit App Title
-# =============================================
-st.title("📺 TV Program Scheduling using Genetic Algorithm")
-st.write("Gunakan Genetic Algorithm untuk mencari jadual program TV paling optimum berdasarkan rating.")
+##################################### READ DATASET FROM GITHUB #########################################################
+# Fungsi untuk membaca fail CSV dari GitHub dan tukar kepada format dictionary
+def read_csv_from_url(url):
+    """
+    Fungsi ini membaca fail CSV dari URL GitHub dan menukarnya kepada dictionary.
+    Setiap baris mewakili satu jenis program dengan nilai rating mengikut jam siaran.
+    """
+    response = requests.get(url)
+    lines = response.text.splitlines()
+    reader = csv.reader(lines)
+    header = next(reader)  # Langkau baris header
 
-# =============================================
-# Load Modified CSV dari GitHub
-# =============================================
+    program_ratings = {}
+    for row in reader:
+        program = row[0]
+        ratings = [float(x) for x in row[1:]]  # Tukar setiap nilai rating kepada float
+        program_ratings[program] = ratings
+
+    return program_ratings, header[1:]  # Pulangkan dictionary dan senarai slot masa
+
+##################################### DEFINING PARAMETERS AND DATASET ################################################################
+# URL dataset CSV dari GitHub
 url = "https://raw.githubusercontent.com/s22a0081-create/programrating-modified-/main/Modifiedprogram_ratings.csv"
 
-try:
-    df_modified = pd.read_csv(url)
-except:
-    st.error("Tidak dapat membaca CSV dari GitHub. Sila semak URL.")
-    st.stop()
+# Baca dataset
+ratings, time_slots = read_csv_from_url(url)
 
-st.subheader("📊 Modified Dataset")
-st.dataframe(df_modified)
+# Parameter asas Genetic Algorithm
+GEN = 250           # Bilangan generasi
+POP = 70            # Saiz populasi
+ELITISM = 2         # Bilangan individu terbaik disimpan
 
-# =============================================
-# Convert dataframe ke dictionary
-# =============================================
-program_ratings = {}
-for i, row in df_modified.iterrows():
-    program = row[0]
-    ratings = list(row[1:].astype(float))
-    program_ratings[program] = ratings
+# Senarai semua program dan slot masa
+all_programs = list(ratings.keys())
+num_slots = len(list(ratings.values())[0])
 
-all_programs = list(program_ratings.keys())
-all_time_slots = list(range(6, 6 + len(list(program_ratings.values())[0])))
-
-# =============================================
-# GA Default Parameters
-# =============================================
-generations = 200
-population_size = 60
-elitism_size = 2
-
-# =============================================
-# Sidebar for 3 Trials: CO_R and MUT_R
-# =============================================
-st.sidebar.header("⚙️ Tetapan GA - 3 Percubaan")
-CO_R_values = []
-MUT_R_values = []
-
-for i in range(1, 4):
-    st.sidebar.write(f"**Percubaan {i}**")
-    co_r = st.sidebar.slider(f"Crossover Rate {i}", 0.0, 0.95, 0.8, 0.05)
-    mut_r = st.sidebar.slider(f"Mutation Rate {i}", 0.01, 0.05, 0.02, 0.01)
-    CO_R_values.append(co_r)
-    MUT_R_values.append(mut_r)
-
-# =============================================
-# GA Functions
-# =============================================
-def fitness_function(schedule):
-    total_rating = 0
+##################################### DEFINING FITNESS FUNCTION ########################################################
+def fitness_function(schedule, ratings):
+    """
+    Fungsi ini mengira jumlah keseluruhan rating bagi sesuatu jadual program.
+    Lebih tinggi nilai total rating, lebih baik prestasi jadual tersebut.
+    """
+    total = 0
     for time_slot, program in enumerate(schedule):
-        total_rating += program_ratings[program][time_slot]
-    return total_rating
+        total += ratings[program][time_slot]
+    return total
 
-def crossover(schedule1, schedule2):
-    crossover_point = random.randint(1, len(schedule1) - 2)
-    child1 = schedule1[:crossover_point] + schedule2[crossover_point:]
-    child2 = schedule2[:crossover_point] + schedule1[crossover_point:]
+##################################### DEFINING CROSSOVER FUNCTION ######################################################
+def crossover(parent1, parent2):
+    """
+    Fungsi crossover akan menukar sebahagian gen (program) antara dua jadual (parent)
+    untuk menghasilkan dua jadual anak (child).
+    """
+    point = random.randint(1, len(parent1) - 2)
+    child1 = parent1[:point] + parent2[point:]
+    child2 = parent2[:point] + parent1[point:]
     return child1, child2
 
-def mutate(schedule):
-    mutation_point = random.randint(0, len(schedule) - 1)
+##################################### DEFINING MUTATION FUNCTION #######################################################
+def mutate(schedule, all_programs):
+    """
+    Fungsi mutasi akan menggantikan satu program rawak dalam jadual
+    dengan program lain untuk menambah variasi dan elakkan 'stagnation'.
+    """
+    point = random.randint(0, len(schedule) - 1)
     new_program = random.choice(all_programs)
-    schedule[mutation_point] = new_program
+    schedule[point] = new_program
     return schedule
 
-def genetic_algorithm(initial_schedule, generations, population_size, crossover_rate, mutation_rate, elitism_size):
-    # Initialize population
-    population = [initial_schedule]
-    for _ in range(population_size - 1):
-        random_schedule = initial_schedule.copy()
-        random.shuffle(random_schedule)
-        population.append(random_schedule)
+##################################### DEFINING GENETIC ALGORITHM FUNCTION ##############################################
+def genetic_algorithm(ratings, generations, population_size, crossover_rate, mutation_rate, elitism_size):
+    """
+    Fungsi utama untuk menjalankan Genetic Algorithm:
+    1. Jana populasi jadual rawak.
+    2. Nilai setiap jadual menggunakan fitness_function.
+    3. Pilih jadual terbaik (elitism).
+    4. Lakukan crossover & mutation untuk hasilkan populasi baru.
+    5. Ulang proses untuk bilangan generasi tertentu.
+    """
+    # Jana populasi awal
+    population = []
+    for _ in range(population_size):
+        schedule = random.choices(all_programs, k=num_slots)
+        population.append(schedule)
 
-    # GA iterations
-    for generation in range(generations):
-        new_population = []
-        population.sort(key=lambda s: fitness_function(s), reverse=True)
-        new_population.extend(population[:elitism_size])
+    # Ulang proses GA untuk setiap generasi
+    for _ in range(generations):
+        population.sort(key=lambda s: fitness_function(s, ratings), reverse=True)
+        new_population = population[:elitism_size]
 
         while len(new_population) < population_size:
-            parent1, parent2 = random.choices(population, k=2)
+            parent1, parent2 = random.choices(population[:20], k=2)
+
+            # Lakukan crossover
             if random.random() < crossover_rate:
                 child1, child2 = crossover(parent1, parent2)
             else:
                 child1, child2 = parent1.copy(), parent2.copy()
 
+            # Lakukan mutation
             if random.random() < mutation_rate:
-                child1 = mutate(child1)
+                child1 = mutate(child1, all_programs)
             if random.random() < mutation_rate:
-                child2 = mutate(child2)
+                child2 = mutate(child2, all_programs)
 
             new_population.extend([child1, child2])
 
-        population = new_population
+        # Gantikan populasi lama dengan populasi baru
+        population = new_population[:population_size]
 
-    # Return best schedule
-    return max(population, key=lambda s: fitness_function(s))
+    # Pilih jadual terbaik selepas semua generasi
+    best_schedule = max(population, key=lambda s: fitness_function(s, ratings))
+    best_score = fitness_function(best_schedule, ratings)
+    return best_schedule, best_score
 
-# =============================================
-# Run 3 Trials
-# =============================================
-if st.button("🚀 Jalankan 3 Percubaan"):
-    for i in range(3):
-        st.subheader(f"🧠 Percubaan {i+1}")
-        st.write(f"**Crossover Rate:** {CO_R_values[i]} | **Mutation Rate:** {MUT_R_values[i]}")
+##################################### STREAMLIT INTERFACE ##############################################################
+# Tajuk aplikasi
+st.title("📺 TV Program Scheduling using Genetic Algorithm")
 
-        initial_schedule = all_programs.copy()
-        random.shuffle(initial_schedule)
+# Penerangan ringkas
+st.write("""
+This Streamlit interface allows you to test **different crossover and mutation rates** 
+to find the most optimal TV scheduling plan using a Genetic Algorithm.
+""")
 
-        best_schedule = genetic_algorithm(
-            initial_schedule,
-            generations=generations,
-            population_size=population_size,
-            crossover_rate=CO_R_values[i],
-            mutation_rate=MUT_R_values[i],
-            elitism_size=elitism_size
+# Paparan dataset
+st.subheader("📊 Modified Dataset Preview")
+df_preview = pd.read_csv(url)
+st.dataframe(df_preview.head())
+
+##################################### STREAMLIT SIDEBAR FOR PARAMETERS #################################################
+st.sidebar.header("⚙️ Parameter Setup for 3 Trials")
+
+trials = []
+for i in range(1, 4):
+    st.sidebar.write(f"### Trial {i}")
+    co_r = st.sidebar.slider(f"Crossover Rate (Trial {i})", 0.0, 0.95, 0.8, 0.05)
+    mut_r = st.sidebar.slider(f"Mutation Rate (Trial {i})", 0.01, 0.05, 0.02, 0.01)
+    trials.append((co_r, mut_r))
+
+##################################### RUN ALL 3 TRIALS #################################################################
+if st.sidebar.button("🚀 Run All 3 Trials"):
+    results = []
+
+    for i, (co_r, mut_r) in enumerate(trials, start=1):
+        st.subheader(f"🧩 Trial {i}")
+        st.write(f"**Crossover Rate:** {co_r}")
+        st.write(f"**Mutation Rate:** {mut_r}")
+
+        # Jalankan Genetic Algorithm
+        best_schedule, best_score = genetic_algorithm(
+            ratings=ratings,
+            generations=GEN,
+            population_size=POP,
+            crossover_rate=co_r,
+            mutation_rate=mut_r,
+            elitism_size=ELITISM
         )
 
-        # Prepare results table
-        results = []
-        for time_slot, program in enumerate(best_schedule):
-            results.append({
-                "Time Slot": f"{all_time_slots[time_slot]:02d}:00",
-                "Program": program,
-                "Rating": program_ratings[program][time_slot]
-            })
+        # Hasilkan jadual dalam bentuk DataFrame
+        df_result = pd.DataFrame({
+            "Time Slot": time_slots[:len(best_schedule)],
+            "Program": best_schedule
+        })
 
-        results_df = pd.DataFrame(results)
-        st.dataframe(results_df)
-        st.success(f"⭐ Total Ratings: {fitness_function(best_schedule):.2f}")
+        # Papar hasil jadual
+        st.table(df_result)
+        st.success(f"⭐ Total Rating: {best_score:.2f}")
+        st.divider()
+
+        # Simpan keputusan ke dalam senarai
+        results.append((i, co_r, mut_r, best_score))
+
+    ##################################### DISPLAY TRIAL SUMMARY ########################################################
+    st.subheader("📈 Summary of All Trials")
+    df_summary = pd.DataFrame(results, columns=["Trial", "Crossover Rate", "Mutation Rate", "Total Rating"])
+    st.dataframe(df_summary)
+
