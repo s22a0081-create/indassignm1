@@ -122,13 +122,10 @@ def genetic_algorithm(ratings, generations, population_size, crossover_rate, mut
 
 ##################################### STREAMLIT INTERFACE ##############################################################
 # Tajuk aplikasi
-st.title("📺 TV Program Scheduling using Genetic Algorithm")
+st.title("TV Program Scheduling")
 
 # Penerangan ringkas
-st.write("""
-This Streamlit interface allows you to test **different crossover and mutation rates** 
-to find the most optimal TV scheduling plan using a Genetic Algorithm.
-""")
+st.write("Using Genetic Algorithm")
 
 # Paparan dataset
 st.subheader("Modified Dataset Preview")
