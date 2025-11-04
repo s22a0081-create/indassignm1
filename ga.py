@@ -131,12 +131,12 @@ to find the most optimal TV scheduling plan using a Genetic Algorithm.
 """)
 
 # Paparan dataset
-st.subheader("📊 Modified Dataset Preview")
+st.subheader("Modified Dataset Preview")
 df_preview = pd.read_csv(url)
 st.dataframe(df_preview.head())
 
 ##################################### STREAMLIT SIDEBAR FOR PARAMETERS #################################################
-st.sidebar.header("⚙️ Parameter Setup for 3 Trials")
+st.sidebar.header("Parameter Setup")
 
 trials = []
 for i in range(1, 4):
@@ -146,7 +146,7 @@ for i in range(1, 4):
     trials.append((co_r, mut_r))
 
 ##################################### RUN ALL 3 TRIALS #################################################################
-if st.sidebar.button("🚀 Run All 3 Trials"):
+if st.sidebar.button("Run 3 Trials"):
     results = []
 
     for i, (co_r, mut_r) in enumerate(trials, start=1):
@@ -179,7 +179,7 @@ if st.sidebar.button("🚀 Run All 3 Trials"):
         results.append((i, co_r, mut_r, best_score))
 
     ##################################### DISPLAY TRIAL SUMMARY ########################################################
-    st.subheader("📈 Summary of All Trials")
+    st.subheader("Summary")
     df_summary = pd.DataFrame(results, columns=["Trial", "Crossover Rate", "Mutation Rate", "Total Rating"])
     st.dataframe(df_summary)
 
